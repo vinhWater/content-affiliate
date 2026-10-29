@@ -2,8 +2,8 @@
 
 > **Nền tảng agent:** LangChain Deep Agents (trên LangGraph) · OpenClaw · n8n
 > **Số nhóm:** 2 nhóm (mỗi nhóm 2 sinh viên) — mỗi nhóm nhận 1 module
-> **Đầu vào linh hoạt:** Người dùng có thể đưa vào **dữ liệu trending từ Data Hub ([Dự án #2 — Spy Trend Data Hub](https://github.com/vinhWater/spy-trend-pod))**, **link bài blog / link sản phẩm**, **đoạn văn bản**, **chủ đề hoặc từ khoá**, hoặc **kết hợp nhiều loại**. Data Hub là một nguồn tích hợp sẵn, **không phải điều kiện bắt buộc** để hệ thống chạy.
-> **Loại đề tài:** Luận văn tốt nghiệp — Hệ thống đa tác nhân có lập kế hoạch dài hạn, tự phản biện và sản xuất media
+> **Vai trò trong hệ sinh thái:** ⭐ **Module 1 (Research Insight Service) là dịch vụ dùng chung**, cung cấp insight cho Module 2 của dự án này và cho [Dự án #4 — AI POD Studio](https://github.com/vinhWater/AI-POD-Studio).
+> **Loại đề tài:** Luận văn tốt nghiệp — Hệ thống đa tác nhân có lập kế hoạch dài hạn và tự phản biện
 
 ---
 
@@ -11,105 +11,97 @@
 
 Nội dung affiliate chất lượng thấp (viết chung chung, không trải nghiệm thực tế, sai thông tin) ngày càng bị công cụ tìm kiếm và người đọc đánh giá thấp. Nội dung hiệu quả cần:
 
-- Bám sát **pain points thật** của người dùng (lấy từ review, hỏi đáp, xu hướng).
+- Bám sát **pain points thật** của người dùng (lấy từ review, hỏi đáp, bài viết, thảo luận).
 - Đạt chuẩn **E-E-A-T** (Experience, Expertise, Authoritativeness, Trustworthiness).
 - **Không sai logic, không sai sự thật**, minh bạch về liên kết affiliate.
-- Có nhiều định dạng: blog, kịch bản video, audio, video ngắn.
 
-Dự án xây dựng hệ thống đa tác nhân **Research → Outline → Write → Critique → Produce**, sử dụng **Deep Agents** cho các tác vụ cần lập kế hoạch nhiều bước, **OpenClaw** cho các agent thao tác/thu thập bổ sung, và **n8n** để điều phối quy trình và kết nối dịch vụ.
+Dự án xây dựng hệ thống đa tác nhân **Research → Outline → Write → Critique**, sử dụng **Deep Agents** cho các tác vụ cần lập kế hoạch nhiều bước, **OpenClaw** cho các agent đọc trang / thu thập thông tin sản phẩm, và **n8n** để điều phối quy trình và kết nối dịch vụ.
 
----
-
-## 2. Mục tiêu dự án
-
-| # | Mục tiêu | Tiêu chí đo lường (gợi ý) |
-|---|----------|---------------------------|
-| G1 | Nhận **đầu vào linh hoạt**: Data Hub (Dự án #2), URL, văn bản, từ khoá hoặc kết hợp | Cả 5 chế độ đầu vào (mục 3.2) đều chạy end-to-end; tích hợp Data Hub qua Trend API `trend.v1`, không sao chép logic thu thập |
-| G2 | Phân tích pain points & insight, lập dàn ý nội dung affiliate | Mỗi dàn ý truy vết được về dữ liệu nguồn (evidence) |
-| G3 | Viết blog / kịch bản video chuẩn E-E-A-T | Đạt ≥ 80% tiêu chí checklist E-E-A-T do nhóm xây dựng |
-| G4 | Tự phản biện: phát hiện lỗi logic, sai sự thật, claim không có căn cứ | Giảm ≥ 50% lỗi so với bản nháp đầu (trên bộ test) |
-| G5 | Xuất thành phẩm media (Audio/Video) | Sinh được audio (TTS) + video ngắn từ kịch bản |
-| G6 | Có human-in-the-loop ở các điểm quyết định | Duyệt dàn ý và duyệt bản cuối trước khi xuất bản |
+**Phạm vi đầu ra là văn bản** (bài blog, kịch bản video có cấu trúc). Việc sản xuất hình ảnh và video từ kịch bản thuộc về **Dự án #4**.
 
 ---
 
-## 3. Kiến trúc tổng thể
+## 2. Hệ sinh thái: Research → Viết & phản biện → Hình ảnh/Video
 
 ```mermaid
 flowchart LR
-    subgraph IN["Đầu vào linh hoạt (chọn một hoặc kết hợp)"]
-        TAPI["Data Hub — Dự án #2<br/>(Trend API / Webhook trend.v1)"]
-        URL["Link bài blog / link sản phẩm"]
-        TXT["Đoạn văn bản / ghi chú"]
-        KW["Chủ đề / từ khoá"]
+    U["Người dùng<br/>(URL, văn bản, từ khoá, file)"]
+
+    subgraph P3["DỰ ÁN #3 — Content Affiliate"]
+        M1["Module 1<br/>Research Insight Service"]
+        M2["Module 2<br/>Writer & Critique"]
     end
 
-    subgraph M1["MODULE 1 — AI Researcher (Insight & Outline)"]
-        N8N1["n8n trigger<br/>(webhook / lịch / user gửi yêu cầu)"]
-        NORM["Input Normalizer<br/>(research_request.v1)"]
-        RPLAN["Research Deep Agent<br/>(planning + sub-agents)"]
-        SUBR0["Sub-agent: Gap-filling Researcher<br/>(tự tìm thêm nguồn khi input mỏng)"]
-        SUBR1["Sub-agent: Pain-point Analyst"]
-        SUBR2["Sub-agent: Competitor/SERP Analyst"]
-        SUBR3["Sub-agent: Product Fact Collector<br/>(OpenClaw)"]
-        BRIEF["Content Brief + Outline<br/>(brief.v1)"]
-        HIL1["Người dùng duyệt dàn ý"]
-    end
+    P4["DỰ ÁN #4<br/>AI POD Studio<br/>(hình ảnh & video)"]
 
-    subgraph M2["MODULE 2 — AI Writer, Critique & Producer"]
-        WRITE["Writer Deep Agent"]
-        CRIT["Critique Agents<br/>(logic · fact · E-E-A-T · compliance)"]
-        REV["Revision loop"]
-        HIL2["Người dùng duyệt bản cuối"]
-        PROD["Producer<br/>(TTS · video · thumbnail)"]
-        PUB["Xuất bản / Export<br/>(CMS, YouTube, TikTok…) qua n8n"]
-    end
-
-    TAPI & URL & TXT & KW --> N8N1 --> NORM --> RPLAN
-    RPLAN --> SUBR0 & SUBR1 & SUBR2 & SUBR3
-    SUBR0 & SUBR1 & SUBR2 & SUBR3 --> BRIEF --> HIL1 --> WRITE
-    WRITE --> CRIT --> REV --> WRITE
-    REV -- "đạt ngưỡng" --> HIL2 --> PROD --> PUB
+    U --> M1
+    M1 -- "content brief (brief.v1)" --> M2
+    M1 -- "creative brief (creative_brief.v1)" --> P4
+    M2 -- "blog + kịch bản (video_script.v1)" --> OUT["Thành phẩm văn bản"]
+    M2 -- "video_script.v1" --> P4
 ```
 
-### 3.1. Vai trò từng công nghệ
+| Định dạng dữ liệu | Bên tạo | Bên dùng | Chốt vào |
+|-------------------|---------|----------|----------|
+| `research_request.v1` | Người dùng / n8n | Module 1 | Tuần 3 |
+| `brief.v1` (content brief) | Module 1 | Module 2 | Tuần 3 |
+| `creative_brief.v1` | Module 1 | Dự án #4 | Tuần 3 |
+| `video_script.v1` | Module 2 | Dự án #4 | Tuần 3 |
 
-| Công nghệ | Vai trò |
-|-----------|---------|
-| **LangChain Deep Agents** | Agent "sâu": tự lập kế hoạch (todo list), dùng **sub-agents** chuyên biệt, **file system ảo** để lưu ghi chú/bản nháp dài, phù hợp tác vụ nghiên cứu và viết nhiều bước |
-| **OpenClaw** | Agent thao tác: đọc trang sản phẩm, thu thập thông số/giá/đánh giá bổ sung, kiểm tra link affiliate; chạy theo lịch hoặc theo yêu cầu |
-| **n8n** | Điều phối: nhận webhook từ Data Hub, gọi Deep Agents qua API, quản lý hàng đợi, gửi thông báo duyệt, gọi dịch vụ TTS/video, xuất bản |
+> Ba nhóm (#3 Module 1, #3 Module 2, #4) cùng chốt các định dạng này trong **tuần 3**. Thay đổi không tương thích phải tăng version và thông báo trước.
 
-### 3.2. Đầu vào linh hoạt
+---
 
-Module 1 có khả năng **tự tìm kiếm insight**, nên không bị giới hạn bởi một nguồn đầu vào cố định. Người dùng có thể thử sản phẩm bằng bất kỳ thứ gì mình có.
+## 3. Mục tiêu dự án
+
+| # | Mục tiêu | Tiêu chí đo lường (gợi ý) |
+|---|----------|---------------------------|
+| G1 | Nhận **đầu vào linh hoạt**: URL, văn bản, từ khoá, file dữ liệu hoặc kết hợp | Cả 5 chế độ đầu vào (mục 4.2) chạy end-to-end |
+| G2 | Phân tích pain points & insight, có bằng chứng cho từng ý | 100% pain point và fact trong brief truy vết được về nguồn |
+| G3 | Research Insight là **dịch vụ dùng chung** cho Module 2 và Dự án #4 | API ổn định, có version; xuất được cả `brief.v1` và `creative_brief.v1` |
+| G4 | Viết blog / kịch bản video chuẩn E-E-A-T | Đạt ≥ 80% tiêu chí checklist E-E-A-T do nhóm xây dựng |
+| G5 | Tự phản biện: phát hiện lỗi logic, sai sự thật, claim không có căn cứ | Giảm ≥ 50% lỗi so với bản nháp đầu (trên bộ test) |
+| G6 | Kiểm soát chi phí nghiên cứu | Mỗi yêu cầu có ngân sách (số nguồn, token); đo và báo cáo chi phí mỗi brief |
+| G7 | Human-in-the-loop ở các điểm quyết định | Duyệt brief và duyệt bản cuối trước khi xuất |
+
+---
+
+## 4. MODULE 1 — Research Insight Service (AI Researcher)
+
+> ⭐ **Module dùng chung.** Nhóm nhận module này chịu trách nhiệm về độ ổn định API, tài liệu và hỗ trợ tích hợp cho nhóm Module 2 và nhóm Dự án #4.
+
+### 4.1. Mục tiêu module
+
+1. Nhận **đầu vào linh hoạt**, chuẩn hoá về `research_request.v1`.
+2. **Tự lập kế hoạch nghiên cứu** và tự tìm thêm nguồn khi đầu vào chưa đủ.
+3. Phân tích sâu **pain points, mong muốn, phản đối (objections)** và **search intent** của người dùng.
+4. Thu thập & kiểm chứng **thông tin sản phẩm** (thông số, giá, chính sách) có nguồn.
+5. Xuất kết quả theo **hai hồ sơ đầu ra**: content brief cho Module 2, creative brief cho Dự án #4.
+6. Nghiên cứu **theo yêu cầu, có ngân sách** — không chạy hàng loạt.
+
+### 4.2. Đầu vào linh hoạt
 
 | Chế độ | Người dùng đưa vào | Hệ thống xử lý |
 |--------|--------------------|----------------|
-| A. Data Hub | Chọn trend từ Data Hub (Dự án #2) hoặc bật tự động theo webhook `trend.created` | Dùng sẵn `review_insights`, `related_keywords`, `top_listings` |
-| B. URL | Link bài blog, link sản phẩm, link video/review | Trích nội dung chính, thông tin sản phẩm, bình luận/đánh giá (nếu được phép) |
-| C. Văn bản | Dán đoạn bài viết, ghi chú, mô tả sản phẩm, bản nháp | Rút ra chủ đề, sản phẩm, claim, câu hỏi còn bỏ ngỏ |
-| D. Từ khoá | Chủ đề hoặc từ khoá (VD: "ghế công thái học dưới 300$") | Agent tự lập kế hoạch nghiên cứu từ đầu |
+| A. URL | Link bài blog, link sản phẩm, link video/review | Trích nội dung chính, thông tin sản phẩm, bình luận/đánh giá (nếu được phép) |
+| B. Văn bản | Dán đoạn bài viết, ghi chú, mô tả sản phẩm, bản nháp, trải nghiệm cá nhân | Rút ra chủ đề, sản phẩm, claim, câu hỏi còn bỏ ngỏ |
+| C. Từ khoá | Chủ đề hoặc từ khoá (VD: "ghế công thái học dưới 300$") | Agent tự lập kế hoạch nghiên cứu từ đầu |
+| D. File dữ liệu | CSV/JSON (danh sách sản phẩm, review, dữ liệu xuất từ công cụ khác — VD: Chrome extension) | Đọc theo schema nhập, gắn nguồn `user_file` |
 | E. Kết hợp | Bất kỳ tổ hợp nào của A–D | Gộp, khử trùng lặp, gắn trọng số theo nguồn |
-
-**Nguyên tắc xử lý:**
-
-- **Input Normalizer** chuyển mọi loại đầu vào về một định dạng chung `research_request.v1` trước khi giao cho Research Deep Agent.
-- **Gap-filling:** Khi đầu vào ít thông tin (VD: chỉ một đoạn văn bản), Research Deep Agent tự lập kế hoạch tìm thêm nguồn (Data Hub nếu có, tìm kiếm web, trang sản phẩm) cho đến khi đủ bằng chứng.
-- **Truy vết nguồn:** Mọi pain point và mọi fact trong brief đều ghi rõ nguồn gốc (`user_text`, `user_url`, `data_hub`, `web_research`) để người dùng biết insight nào do họ cung cấp và insight nào do agent tìm thêm.
 
 ```json
 {
   "schema_version": "research_request.v1",
   "request_id": "rq_2026_10_29_0007",
   "inputs": [
-    { "type": "data_hub_trend", "trend_id": "tr_2026_10_29_0012" },
     { "type": "url", "url": "https://example.com/best-office-chairs", "role": "competitor_article" },
+    { "type": "url", "url": "https://example.com/products/chair-x", "role": "product_page" },
     { "type": "text", "content": "Mình bị đau lưng khi ngồi lâu, đã thử 2 loại ghế...", "role": "user_experience" },
     { "type": "keyword", "value": "ergonomic chair under $300" }
   ],
   "goal": "affiliate buying guide",
-  "formats": ["blog", "video_script"],
+  "output_profiles": ["content", "creative"],
+  "budget": { "max_sources": 25, "max_llm_cost_usd": 0.5 },
   "allow_web_research": true,
   "lang": "vi"
 }
@@ -117,23 +109,57 @@ Module 1 có khả năng **tự tìm kiếm insight**, nên không bị giới h
 
 > Ghi chú `role: "user_experience"` (trải nghiệm thật của người dùng) là nguồn chính cho chữ **"Experience"** trong E-E-A-T. Agent không được tự bịa trải nghiệm.
 
-**Tích hợp Data Hub (Dự án #2):**
+### 4.3. Kiến trúc agent
 
-- Data Hub là **một nguồn đầu vào được tích hợp sẵn**, không phải điều kiện bắt buộc. Hệ thống vẫn chạy đầy đủ khi chỉ có URL hoặc văn bản.
-- Khi dùng dữ liệu thị trường, Dự án #3 lấy qua **Trend API** của Data Hub, **không tự xây lại** pipeline thu thập trending.
-- Nhóm Dự án #3 và nhóm Data Hub (Dự án #2) cùng chốt data contract `trend.v1` trong **tuần 3** (cùng với nhóm Dự án #4 — AI POD Studio, cũng là bên tiêu thụ).
+```mermaid
+flowchart TB
+    REQ["research_request.v1<br/>(API / n8n)"] --> NORM["Input Normalizer"]
+    NORM --> PLAN["Research Deep Agent<br/>(lập kế hoạch todo, file system, ngân sách)"]
 
-### 3.3. Data Contract giữa Module 1 và Module 2 (`brief.v1`)
+    PLAN --> GAP["Sub-agent: Gap-filling Researcher<br/>(tìm thêm nguồn khi thiếu bằng chứng)"]
+    PLAN --> PAIN["Sub-agent: Pain-point Analyst"]
+    PLAN --> SERP["Sub-agent: Competitor / SERP Analyst"]
+    PLAN --> FACT["Sub-agent: Product Fact Collector<br/>(OpenClaw)"]
+
+    GAP & PAIN & SERP & FACT --> SYN["Insight Synthesizer<br/>(research_result — kết quả gốc)"]
+    SYN --> HIL["Người dùng duyệt"]
+    HIL --> CB["Content brief<br/>brief.v1 → Module 2"]
+    HIL --> CRB["Creative brief<br/>creative_brief.v1 → Dự án #4"]
+```
+
+| Agent | Nhiệm vụ |
+|-------|----------|
+| Input Normalizer | Gộp 5 chế độ đầu vào về `research_request.v1` |
+| Research Deep Agent | Lập kế hoạch nghiên cứu (todo), điều phối sub-agents, lưu ghi chú vào file system của agent, theo dõi ngân sách |
+| Gap-filling Researcher | Đánh giá đầu vào đã đủ bằng chứng chưa; nếu chưa, tự tìm thêm (web, trang sản phẩm) trong giới hạn ngân sách |
+| Pain-point Analyst | Gom cụm pain points/desires/objections, xếp hạng theo tần suất & mức độ, gắn evidence |
+| Competitor / SERP Analyst | Phân tích nội dung đối thủ đang xếp hạng, tìm khoảng trống nội dung (content gap) |
+| Product Fact Collector | Agent OpenClaw đọc trang sản phẩm: thông số, giá, chính sách; ghi nguồn và thời điểm |
+| Insight Synthesizer | Tổng hợp thành kết quả gốc, rồi xuất theo từng hồ sơ đầu ra |
+
+### 4.4. Kiểm soát chi phí
+
+Đây là yêu cầu bắt buộc, không phải tối ưu thêm:
+
+- **Theo yêu cầu, không hàng loạt:** chỉ nghiên cứu khi có `research_request`, giới hạn số nguồn mỗi yêu cầu.
+- **Phân tầng mô hình:** mô hình rẻ cho trích xuất / phân loại / tóm tắt từng nguồn; mô hình mạnh chỉ cho bước tổng hợp cuối.
+- **Cache:** nội dung URL và kết quả trích xuất được lưu lại; cùng một nguồn không phân tích hai lần.
+- **Dừng sớm:** Gap-filling Researcher dừng khi đủ bằng chứng hoặc hết ngân sách, và ghi rõ trong brief phần nào còn thiếu.
+- **Đo lường:** mỗi brief ghi lại số nguồn, số token, chi phí, thời gian.
+
+### 4.5. Hai hồ sơ đầu ra
+
+**Content brief (`brief.v1`) → Module 2:**
 
 ```json
 {
   "schema_version": "brief.v1",
   "brief_id": "br_2026_10_29_0004",
-  "source_trend_ids": ["tr_2026_10_29_0012"],
+  "research_id": "rs_2026_10_29_0007",
   "topic": "Best ergonomic office chairs under $300 for back pain",
   "audience": { "persona": "remote worker, 25-40", "intent": "commercial investigation" },
   "pain_points": [
-    { "text": "lower back pain after 4+ hours", "evidence": ["review:amz:...", "trend:..."], "weight": 0.9 }
+    { "text": "lower back pain after 4+ hours", "evidence": ["user_text:1", "url:review-site"], "weight": 0.9 }
   ],
   "products": [
     { "name": "...", "affiliate_url": "...", "facts": { "price": "...", "warranty": "..." }, "fact_sources": ["..."] }
@@ -144,78 +170,90 @@ Module 1 có khả năng **tự tìm kiếm insight**, nên không bị giới h
     { "h2": "Top 5 picks compared", "points": ["..."] }
   ],
   "formats": ["blog", "video_script"],
-  "eeat_requirements": ["first-hand testing notes", "author bio", "cite sources", "affiliate disclosure"],
+  "eeat_requirements": ["first-hand experience notes", "author bio", "cite sources", "affiliate disclosure"],
+  "gaps": ["chưa có dữ liệu bảo hành của sản phẩm #3"],
   "lang": "en"
 }
 ```
 
----
+**Creative brief (`creative_brief.v1`) → Dự án #4:**
 
-## 4. MODULE 1 — Phân tích Insight & Lập dàn ý (AI Researcher)
+```json
+{
+  "schema_version": "creative_brief.v1",
+  "creative_brief_id": "cb_2026_10_29_0004",
+  "research_id": "rs_2026_10_29_0007",
+  "product": {
+    "name": "Chair X",
+    "category": "ergonomic office chair",
+    "reference_images": ["https://example.com/chair-x-front.jpg"],
+    "must_keep": ["logo trên lưng ghế", "màu lưới xám"]
+  },
+  "audience": ["remote workers 25-40", "people with lower back pain"],
+  "key_message": "Ngồi 8 tiếng không còn đau lưng",
+  "selling_points": [
+    { "text": "adjustable lumbar support", "evidence": ["url:product_page"] },
+    { "text": "breathable mesh back", "evidence": ["url:review-site"] }
+  ],
+  "pain_points": [{ "text": "lower back pain after long sitting", "evidence": ["user_text:1"] }],
+  "mood": ["clean", "calm", "home office"],
+  "do_not_claim": ["chữa khỏi bệnh lý cột sống"],
+  "lang": "vi"
+}
+```
 
-### 4.1. Mục tiêu module
+### 4.6. API dịch vụ
 
-1. Nhận **đầu vào linh hoạt** (Data Hub, URL, văn bản, từ khoá hoặc kết hợp), chuẩn hoá về `research_request.v1`, và **tự tìm thêm nguồn** khi đầu vào chưa đủ.
-2. Phân tích sâu **pain points, mong muốn, phản đối (objections)** của người dùng.
-3. Xác định góc tiếp cận nội dung (so sánh, hướng dẫn mua, review, giải quyết vấn đề) và **search intent**.
-4. Thu thập & kiểm chứng **thông tin sản phẩm** (thông số, giá, chính sách) có nguồn.
-5. Sinh **Content Brief + Dàn ý** chuẩn `brief.v1`, mỗi ý đều truy vết được về bằng chứng.
+| Endpoint | Mô tả |
+|----------|-------|
+| `POST /research` | Gửi `research_request.v1`, trả `research_id` (chạy bất đồng bộ) |
+| `GET /research/{id}` | Trạng thái, tiến độ (todo list của agent), chi phí đã dùng |
+| `GET /research/{id}/brief?profile=content` | Lấy `brief.v1` |
+| `GET /research/{id}/brief?profile=creative` | Lấy `creative_brief.v1` |
+| Webhook `research.completed` | Báo cho n8n / Module 2 / Dự án #4 |
 
-### 4.2. Chức năng chi tiết
+### 4.7. Sản phẩm bàn giao
 
-| Thành phần | Mô tả | Mức độ |
-|------------|-------|--------|
-| Input Normalizer | Nhận 5 chế độ đầu vào (mục 3.2): trích nội dung từ URL, phân tích văn bản, đọc trend từ Data Hub; gộp về `research_request.v1` | Bắt buộc |
-| Trend consumer | Nhận `trend.created` qua webhook n8n hoặc truy vấn Trend API theo chủ đề (chế độ A) | Bắt buộc |
-| Research Deep Agent | Lập kế hoạch nghiên cứu (todo), điều phối sub-agents, lưu ghi chú vào file system của agent | Bắt buộc |
-| Gap-filling Researcher | Đánh giá đầu vào đã đủ bằng chứng chưa; nếu chưa, tự tìm thêm (web, trang sản phẩm, Data Hub) | Bắt buộc |
-| Pain-point Analyst | Gom cụm pain points, xếp hạng theo tần suất & mức độ, gắn evidence | Bắt buộc |
-| Competitor/SERP Analyst | Phân tích nội dung đối thủ đang xếp hạng: khoảng trống nội dung (content gap) | Bắt buộc |
-| Product Fact Collector | Agent OpenClaw thu thập thông số/giá/đánh giá; ghi nguồn và thời điểm | Bắt buộc |
-| Outline Generator | Sinh dàn ý H2/H3, ý chính, vị trí đặt sản phẩm, FAQ | Bắt buộc |
-| Human-in-the-loop | Dashboard để người dùng duyệt/sửa brief trước khi chuyển Module 2 | Bắt buộc |
-| Insight dashboard | Trực quan hoá pain points theo niche/thời gian | Khuyến khích |
-
-### 4.3. Sản phẩm bàn giao
-
-- [ ] Input Normalizer hỗ trợ đủ 5 chế độ đầu vào (Data Hub, URL, văn bản, từ khoá, kết hợp)
-- [ ] Tích hợp Trend API của Data Hub (không trùng lặp logic thu thập)
-- [ ] Research Deep Agent với ≥ 4 sub-agents (gồm Gap-filling Researcher)
-- [ ] Sinh brief `brief.v1` có evidence cho mọi pain point và fact
+- [ ] Input Normalizer hỗ trợ đủ 5 chế độ đầu vào
+- [ ] Research Deep Agent với ≥ 4 sub-agents
+- [ ] Hai hồ sơ đầu ra `brief.v1` và `creative_brief.v1`, có evidence cho mọi pain point và fact
+- [ ] API dịch vụ + webhook + OpenAPI spec
+- [ ] **Bộ ≥ 20 brief mẫu mỗi loại, giao cho Module 2 và nhóm Dự án #4 trước tuần 4**
+- [ ] Cơ chế ngân sách, cache, phân tầng mô hình
 - [ ] Dashboard duyệt brief
-- [ ] Bộ ≥ 30 brief mẫu cho Module 2 phát triển song song (từ tuần 4)
-- [ ] Báo cáo đánh giá: độ chính xác pain point (so với gán nhãn tay), độ phủ content gap, tỉ lệ fact có nguồn, **so sánh chất lượng brief giữa các chế độ đầu vào**
+- [ ] Báo cáo đánh giá: độ chính xác pain point (so với gán nhãn tay), độ phủ content gap, tỉ lệ fact có nguồn, chi phí & thời gian mỗi brief, so sánh chất lượng giữa các chế độ đầu vào
 
-### 4.4. Gợi ý phân công
+### 4.8. Gợi ý phân công
 
 | Thành viên | Phụ trách |
 |------------|-----------|
-| SV1 | Input Normalizer, tích hợp Data Hub, n8n workflows, Product Fact Collector (OpenClaw), dashboard duyệt |
-| SV2 | Research Deep Agent, Gap-filling Researcher, Pain-point Analyst, Competitor Analyst, Outline Generator, đánh giá |
+| SV1 | Input Normalizer, Product Fact Collector (OpenClaw), API dịch vụ, n8n, cache & ngân sách, dashboard duyệt |
+| SV2 | Research Deep Agent, Gap-filling Researcher, Pain-point Analyst, Competitor Analyst, Insight Synthesizer, đánh giá |
 
 ---
 
-## 5. MODULE 2 — Sáng tạo Content, Kiểm duyệt & Media (AI Writer, Critique & Producer)
+## 5. MODULE 2 — Writer & Critique (AI Writer, Critique)
 
 ### 5.1. Mục tiêu module
 
-1. Từ brief đã duyệt, viết **bài blog** và **kịch bản video** chuẩn E-E-A-T.
-2. **Tự kiểm duyệt chéo** bằng nhiều agent phản biện, lặp sửa đến khi đạt ngưỡng chất lượng.
-3. Đóng gói thành phẩm media: **audio (TTS/podcast)**, **video ngắn/dài**, thumbnail.
-4. Xuất bản hoặc xuất file qua n8n.
+1. Từ content brief đã duyệt, viết **bài blog** chuẩn E-E-A-T.
+2. Chuyển thể thành **kịch bản video có cấu trúc** (`video_script.v1`) để Dự án #4 sản xuất video.
+3. **Tự kiểm duyệt chéo** bằng nhiều agent phản biện, lặp sửa đến khi đạt ngưỡng chất lượng.
+4. Xuất thành phẩm văn bản (Markdown/HTML, JSON), tuỳ chọn đăng bản nháp lên CMS qua n8n.
+
+> **Không thuộc phạm vi:** TTS, audio, dựng video, thumbnail — thuộc Dự án #4.
 
 ### 5.2. Các agent
 
 | Agent | Nhiệm vụ |
 |-------|----------|
 | Writer Deep Agent | Lập kế hoạch viết theo từng section, lưu bản nháp vào file system, viết theo giọng văn/persona |
-| Script Adapter | Chuyển bài viết thành kịch bản video (hook, cảnh, lời thoại, B-roll, CTA) |
+| Script Adapter | Chuyển bài viết thành `video_script.v1`: hook, cảnh, lời thoại, chữ trên màn hình, gợi ý hình ảnh, CTA |
 | Logic Critic | Phát hiện mâu thuẫn, lập luận yếu, kết luận không theo sau tiền đề |
 | Fact Critic | Đối chiếu mọi claim với `facts`/`evidence` trong brief; claim không có nguồn → gắn cờ |
 | E-E-A-T Critic | Chấm theo checklist: trải nghiệm thực tế, chuyên môn, nguồn dẫn, minh bạch |
 | Compliance Critic | Kiểm tra affiliate disclosure, claim y tế/tài chính, chính sách nền tảng |
 | Revision Controller | Tổng hợp phản biện → yêu cầu Writer sửa; dừng khi đạt ngưỡng hoặc hết số vòng tối đa |
-| Producer | TTS → audio; ghép video (giọng đọc + hình ảnh/B-roll + phụ đề); tạo thumbnail |
 
 ### 5.3. Vòng lặp tự phản biện
 
@@ -226,7 +264,7 @@ sequenceDiagram
     participant R as Revision Controller
     participant H as Người duyệt
 
-    W->>C: Bản nháp v1
+    W->>C: Bản nháp v1 (blog + script)
     C->>R: Danh sách lỗi (mức độ, vị trí, gợi ý sửa)
     R->>W: Yêu cầu sửa (ưu tiên lỗi nghiêm trọng)
     W->>C: Bản nháp v2
@@ -238,27 +276,64 @@ sequenceDiagram
     end
 ```
 
-> Báo cáo phản biện (lỗi phát hiện / đã sửa / còn tồn tại) phải được lưu lại — đây là dữ liệu chính để đánh giá trong luận văn.
+> Báo cáo phản biện (lỗi phát hiện / đã sửa / còn tồn tại) phải được lưu lại — đây là dữ liệu chính để đánh giá trong luận văn. Để tiết kiệm, Critic chỉ chấm lại **các đoạn đã sửa** ở vòng sau, không chấm lại toàn bài.
 
-### 5.4. Sản phẩm bàn giao
+### 5.4. Kịch bản video có cấu trúc (`video_script.v1`) → Dự án #4
 
-- [ ] Writer Deep Agent sinh blog + kịch bản video từ `brief.v1`
+```json
+{
+  "schema_version": "video_script.v1",
+  "script_id": "vs_2026_10_29_0004",
+  "brief_id": "br_2026_10_29_0004",
+  "creative_brief_id": "cb_2026_10_29_0004",
+  "aspect_ratio": "9:16",
+  "target_duration_s": 30,
+  "voice": { "tone": "friendly, calm", "lang": "vi" },
+  "scenes": [
+    {
+      "id": 1,
+      "duration_s": 3,
+      "purpose": "hook",
+      "voiceover": "Ngồi làm việc 4 tiếng là đau lưng?",
+      "on_screen_text": "Đau lưng khi ngồi lâu?",
+      "visual_hint": "người ôm lưng trước bàn làm việc, ánh sáng dịu",
+      "claims": []
+    },
+    {
+      "id": 2,
+      "duration_s": 6,
+      "purpose": "selling_point",
+      "voiceover": "Chair X có đệm lưng dưới điều chỉnh được...",
+      "on_screen_text": "Đệm lưng điều chỉnh",
+      "visual_hint": "cận cảnh phần đệm lưng của sản phẩm",
+      "claims": [{ "text": "adjustable lumbar support", "evidence": ["url:product_page"] }]
+    }
+  ],
+  "cta": "Xem giá ở link bên dưới",
+  "disclosure": "Bài viết có chứa liên kết affiliate"
+}
+```
+
+### 5.5. Sản phẩm bàn giao
+
+- [ ] Writer Deep Agent sinh blog từ `brief.v1`
+- [ ] Script Adapter sinh `video_script.v1` hợp lệ (có validator schema)
 - [ ] ≥ 4 Critique Agents + Revision Controller
 - [ ] Checklist E-E-A-T có thể chấm tự động (rubric)
-- [ ] Producer: audio (TTS) + video ngắn có phụ đề + thumbnail
-- [ ] n8n workflow xuất bản/xuất file
+- [ ] Xuất Markdown/HTML + JSON; tuỳ chọn đăng nháp lên CMS qua n8n
+- [ ] **Bộ ≥ 10 `video_script.v1` mẫu giao cho nhóm Dự án #4 trước tuần 6**
 - [ ] Báo cáo đánh giá: số lỗi trước/sau phản biện, điểm E-E-A-T, đánh giá người đọc (user study nhỏ), chi phí & thời gian mỗi thành phẩm
 
-### 5.5. Gợi ý phân công
+### 5.6. Gợi ý phân công
 
 | Thành viên | Phụ trách |
 |------------|-----------|
-| SV1 | Writer Deep Agent, Script Adapter, Critique Agents, Revision Controller |
-| SV2 | Producer (TTS, video, thumbnail), n8n xuất bản, rubric E-E-A-T & đánh giá |
+| SV1 | Writer Deep Agent, Script Adapter, Revision Controller |
+| SV2 | Logic / Fact / E-E-A-T / Compliance Critic, rubric E-E-A-T, n8n xuất bản, đánh giá |
 
-### 5.6. Phát triển song song với Module 1
+### 5.7. Phát triển song song với Module 1
 
-Module 2 dùng bộ **brief mẫu** do Module 1 cung cấp từ tuần 4; tích hợp pipeline thật từ tuần 9.
+Module 2 dùng bộ **brief mẫu** do Module 1 giao từ tuần 4; tích hợp API thật từ tuần 9.
 
 ---
 
@@ -267,34 +342,34 @@ Module 2 dùng bộ **brief mẫu** do Module 1 cung cấp từ tuần 4; tích 
 | Lớp | Công nghệ |
 |-----|-----------|
 | Agent framework | LangChain `deepagents`, LangGraph (checkpoint, human-in-the-loop interrupt) |
-| Agent thao tác | OpenClaw + skills tuỳ biến |
+| Agent đọc trang | OpenClaw + skills tuỳ biến |
 | Orchestration | n8n (self-hosted) |
-| LLM | Cấu hình được (Claude / Gemini / GPT / mô hình mở) |
-| Quan sát & đánh giá | LangSmith hoặc Langfuse |
-| TTS | Google Cloud TTS / ElevenLabs / mô hình mở (VD: XTTS) |
-| Video | FFmpeg, MoviePy, Remotion |
-| Lưu trữ | PostgreSQL (+ pgvector), MinIO/S3 |
+| LLM | Cấu hình được (Claude / Gemini / GPT / mô hình mở); phân tầng mô hình rẻ / mạnh |
+| Quan sát & đánh giá | LangSmith hoặc Langfuse (theo dõi token, chi phí, vòng lặp) |
+| Lưu trữ | PostgreSQL (+ pgvector), cache nội dung URL |
+| API | FastAPI, OpenAPI |
 | Dashboard | Next.js / Streamlit |
 
 ---
 
 ## 7. Lộ trình gợi ý (16 tuần)
 
-| Tuần | Module 1 (AI Researcher) | Module 2 (Writer, Critique & Producer) |
-|------|--------------------------|----------------------------------------|
-| 1–2 | Nghiên cứu Deep Agents, OpenClaw, E-E-A-T; tìm hiểu Trend API của Data Hub | Nghiên cứu Deep Agents, kỹ thuật self-critique, TTS/video |
-| 3 | **Chốt `trend.v1` với nhóm Data Hub; chốt `brief.v1` với Module 2** | Chốt `brief.v1` |
-| 4–7 | Input Normalizer (URL, văn bản, từ khoá) + Research Deep Agent + sub-agents; bàn giao brief mẫu | Writer Deep Agent + Script Adapter trên brief mẫu |
-| 8–10 | Tích hợp Data Hub thật, Product Fact Collector, dashboard duyệt | Critique Agents + Revision loop |
-| 11–12 | Hoàn thiện, đánh giá chất lượng insight | Producer (audio/video), n8n xuất bản |
-| 13–14 | Tích hợp end-to-end với Module 2 | Tích hợp end-to-end, user study |
+| Tuần | Module 1 (Research Insight Service) | Module 2 (Writer & Critique) |
+|------|-------------------------------------|------------------------------|
+| 1–2 | Nghiên cứu Deep Agents, OpenClaw, E-E-A-T | Nghiên cứu Deep Agents, kỹ thuật self-critique |
+| 3 | **Chốt `research_request.v1`, `brief.v1`, `creative_brief.v1` với Module 2 và nhóm Dự án #4** | **Chốt `brief.v1`, `video_script.v1` với Module 1 và nhóm Dự án #4** |
+| 4 | Giao brief mẫu (content + creative) | Writer Deep Agent trên brief mẫu |
+| 4–7 | Input Normalizer + Research Deep Agent + sub-agents | Writer + Script Adapter; giao script mẫu cho #4 (tuần 6) |
+| 8–10 | API dịch vụ, ngân sách, cache, dashboard duyệt | Critique Agents + Revision loop |
+| 11–12 | Hoàn thiện, đánh giá chất lượng insight & chi phí | Rubric E-E-A-T, xuất bản qua n8n |
+| 13–14 | Tích hợp end-to-end với Module 2 và Dự án #4 | Tích hợp end-to-end, user study |
 | 15–16 | Luận văn + demo | Luận văn + demo |
 
 ## 8. Rủi ro & lưu ý
 
-- **Phụ thuộc Data Hub:** Thấp, vì hệ thống chạy được với URL/văn bản/từ khoá. Nếu Data Hub chậm tiến độ, chế độ A dùng seed data `trend.v1`; không tự xây pipeline thu thập trending riêng.
-- **Thu thập từ URL người dùng đưa vào:** Tôn trọng điều khoản trang web và `robots.txt`; chỉ lấy nội dung cần cho phân tích, không đăng lại nguyên văn nội dung của người khác.
-- **Hallucination về sản phẩm:** Mọi số liệu sản phẩm phải có nguồn; Fact Critic chặn claim không có nguồn.
-- **E-E-A-T "Experience":** AI không có trải nghiệm thực tế — hệ thống phải có chỗ cho người dùng bổ sung ghi chú trải nghiệm thật, và không được bịa trải nghiệm.
-- **Tuân thủ:** Bắt buộc affiliate disclosure; tránh claim y tế/tài chính không có căn cứ; tôn trọng bản quyền hình ảnh/nhạc trong video.
-- **Chi phí:** Vòng lặp phản biện tốn token — đặt giới hạn số vòng và đo chi phí mỗi thành phẩm.
+- **Module 1 có nhiều bên phụ thuộc:** giao brief mẫu sớm; dùng versioning cho mọi định dạng dữ liệu.
+- **Chi phí nghiên cứu:** bắt buộc có ngân sách mỗi yêu cầu, cache và phân tầng mô hình.
+- **Hallucination về sản phẩm:** mọi số liệu sản phẩm phải có nguồn; Fact Critic chặn claim không có nguồn.
+- **E-E-A-T "Experience":** AI không có trải nghiệm thực tế — hệ thống lấy trải nghiệm từ người dùng (`user_experience`), không bịa trải nghiệm.
+- **Thu thập từ URL:** tôn trọng điều khoản trang web và `robots.txt`; chỉ lấy nội dung cần cho phân tích, không đăng lại nguyên văn nội dung của người khác.
+- **Tuân thủ:** bắt buộc affiliate disclosure; tránh claim y tế/tài chính không có căn cứ.
