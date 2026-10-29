@@ -2,7 +2,7 @@
 
 > **Nền tảng agent:** LangChain Deep Agents (trên LangGraph) · OpenClaw · n8n
 > **Số nhóm:** 2 nhóm (mỗi nhóm 2 sinh viên) — mỗi nhóm nhận 1 module
-> **Kế thừa:** Sử dụng lại **Module 1 của Dự án #2 — Centralized Spy Trend & Data Orchestration (Data Hub chung)** làm nguồn dữ liệu đầu vào.
+> **Đầu vào linh hoạt:** Người dùng có thể đưa vào **dữ liệu trending từ Data Hub ([Dự án #2 — Spy Trend Data Hub](https://github.com/vinhWater/spy-trend-pod))**, **link bài blog / link sản phẩm**, **đoạn văn bản**, **chủ đề hoặc từ khoá**, hoặc **kết hợp nhiều loại**. Data Hub là một nguồn tích hợp sẵn, **không phải điều kiện bắt buộc** để hệ thống chạy.
 > **Loại đề tài:** Luận văn tốt nghiệp — Hệ thống đa tác nhân có lập kế hoạch dài hạn, tự phản biện và sản xuất media
 
 ---
@@ -24,7 +24,7 @@ Dự án xây dựng hệ thống đa tác nhân **Research → Outline → Writ
 
 | # | Mục tiêu | Tiêu chí đo lường (gợi ý) |
 |---|----------|---------------------------|
-| G1 | Tái sử dụng Data Hub của Dự án #2 làm nguồn dữ liệu thị trường | Tích hợp qua Trend API `trend.v1`, không sao chép logic thu thập |
+| G1 | Nhận **đầu vào linh hoạt**: Data Hub (Dự án #2), URL, văn bản, từ khoá hoặc kết hợp | Cả 5 chế độ đầu vào (mục 3.2) đều chạy end-to-end; tích hợp Data Hub qua Trend API `trend.v1`, không sao chép logic thu thập |
 | G2 | Phân tích pain points & insight, lập dàn ý nội dung affiliate | Mỗi dàn ý truy vết được về dữ liệu nguồn (evidence) |
 | G3 | Viết blog / kịch bản video chuẩn E-E-A-T | Đạt ≥ 80% tiêu chí checklist E-E-A-T do nhóm xây dựng |
 | G4 | Tự phản biện: phát hiện lỗi logic, sai sự thật, claim không có căn cứ | Giảm ≥ 50% lỗi so với bản nháp đầu (trên bộ test) |
@@ -37,13 +37,18 @@ Dự án xây dựng hệ thống đa tác nhân **Research → Outline → Writ
 
 ```mermaid
 flowchart LR
-    subgraph HUB["KẾ THỪA — Dự án #2 · Module 1: Data Hub"]
-        TAPI["Trend API / Webhook<br/>(trend.v1)"]
+    subgraph IN["Đầu vào linh hoạt (chọn một hoặc kết hợp)"]
+        TAPI["Data Hub — Dự án #2<br/>(Trend API / Webhook trend.v1)"]
+        URL["Link bài blog / link sản phẩm"]
+        TXT["Đoạn văn bản / ghi chú"]
+        KW["Chủ đề / từ khoá"]
     end
 
     subgraph M1["MODULE 1 — AI Researcher (Insight & Outline)"]
-        N8N1["n8n trigger<br/>(webhook trend.created / lịch)"]
+        N8N1["n8n trigger<br/>(webhook / lịch / user gửi yêu cầu)"]
+        NORM["Input Normalizer<br/>(research_request.v1)"]
         RPLAN["Research Deep Agent<br/>(planning + sub-agents)"]
+        SUBR0["Sub-agent: Gap-filling Researcher<br/>(tự tìm thêm nguồn khi input mỏng)"]
         SUBR1["Sub-agent: Pain-point Analyst"]
         SUBR2["Sub-agent: Competitor/SERP Analyst"]
         SUBR3["Sub-agent: Product Fact Collector<br/>(OpenClaw)"]
@@ -60,9 +65,9 @@ flowchart LR
         PUB["Xuất bản / Export<br/>(CMS, YouTube, TikTok…) qua n8n"]
     end
 
-    TAPI --> N8N1 --> RPLAN
-    RPLAN --> SUBR1 & SUBR2 & SUBR3
-    SUBR1 & SUBR2 & SUBR3 --> BRIEF --> HIL1 --> WRITE
+    TAPI & URL & TXT & KW --> N8N1 --> NORM --> RPLAN
+    RPLAN --> SUBR0 & SUBR1 & SUBR2 & SUBR3
+    SUBR0 & SUBR1 & SUBR2 & SUBR3 --> BRIEF --> HIL1 --> WRITE
     WRITE --> CRIT --> REV --> WRITE
     REV -- "đạt ngưỡng" --> HIL2 --> PROD --> PUB
 ```
@@ -75,12 +80,48 @@ flowchart LR
 | **OpenClaw** | Agent thao tác: đọc trang sản phẩm, thu thập thông số/giá/đánh giá bổ sung, kiểm tra link affiliate; chạy theo lịch hoặc theo yêu cầu |
 | **n8n** | Điều phối: nhận webhook từ Data Hub, gọi Deep Agents qua API, quản lý hàng đợi, gửi thông báo duyệt, gọi dịch vụ TTS/video, xuất bản |
 
-### 3.2. Kế thừa Data Hub (Dự án #2 · Module 1)
+### 3.2. Đầu vào linh hoạt
 
-- Dự án #3 **không tự xây lại** pipeline thu thập; mọi dữ liệu thị trường lấy từ **Trend API** của Data Hub.
-- Trường quan trọng nhất: `signals.review_insights` (pain points, desires), `related_keywords`, `top_listings`, `metrics`.
-- Nếu cần dữ liệu mà Data Hub chưa có (VD: Q&A, forum), nhóm Dự án #3 **đề xuất yêu cầu** (issue/feature request) cho nhóm Data Hub, hoặc viết **connector bổ sung theo chuẩn plug-in của Data Hub** — không xây pipeline riêng.
-- Ba nhóm (Dự án #2 Module 1, Module 2 và Dự án #3 Module 1) cùng chốt data contract trong **tuần 3**.
+Module 1 có khả năng **tự tìm kiếm insight**, nên không bị giới hạn bởi một nguồn đầu vào cố định. Người dùng có thể thử sản phẩm bằng bất kỳ thứ gì mình có.
+
+| Chế độ | Người dùng đưa vào | Hệ thống xử lý |
+|--------|--------------------|----------------|
+| A. Data Hub | Chọn trend từ Data Hub (Dự án #2) hoặc bật tự động theo webhook `trend.created` | Dùng sẵn `review_insights`, `related_keywords`, `top_listings` |
+| B. URL | Link bài blog, link sản phẩm, link video/review | Trích nội dung chính, thông tin sản phẩm, bình luận/đánh giá (nếu được phép) |
+| C. Văn bản | Dán đoạn bài viết, ghi chú, mô tả sản phẩm, bản nháp | Rút ra chủ đề, sản phẩm, claim, câu hỏi còn bỏ ngỏ |
+| D. Từ khoá | Chủ đề hoặc từ khoá (VD: "ghế công thái học dưới 300$") | Agent tự lập kế hoạch nghiên cứu từ đầu |
+| E. Kết hợp | Bất kỳ tổ hợp nào của A–D | Gộp, khử trùng lặp, gắn trọng số theo nguồn |
+
+**Nguyên tắc xử lý:**
+
+- **Input Normalizer** chuyển mọi loại đầu vào về một định dạng chung `research_request.v1` trước khi giao cho Research Deep Agent.
+- **Gap-filling:** Khi đầu vào ít thông tin (VD: chỉ một đoạn văn bản), Research Deep Agent tự lập kế hoạch tìm thêm nguồn (Data Hub nếu có, tìm kiếm web, trang sản phẩm) cho đến khi đủ bằng chứng.
+- **Truy vết nguồn:** Mọi pain point và mọi fact trong brief đều ghi rõ nguồn gốc (`user_text`, `user_url`, `data_hub`, `web_research`) để người dùng biết insight nào do họ cung cấp và insight nào do agent tìm thêm.
+
+```json
+{
+  "schema_version": "research_request.v1",
+  "request_id": "rq_2026_10_29_0007",
+  "inputs": [
+    { "type": "data_hub_trend", "trend_id": "tr_2026_10_29_0012" },
+    { "type": "url", "url": "https://example.com/best-office-chairs", "role": "competitor_article" },
+    { "type": "text", "content": "Mình bị đau lưng khi ngồi lâu, đã thử 2 loại ghế...", "role": "user_experience" },
+    { "type": "keyword", "value": "ergonomic chair under $300" }
+  ],
+  "goal": "affiliate buying guide",
+  "formats": ["blog", "video_script"],
+  "allow_web_research": true,
+  "lang": "vi"
+}
+```
+
+> Ghi chú `role: "user_experience"` (trải nghiệm thật của người dùng) là nguồn chính cho chữ **"Experience"** trong E-E-A-T. Agent không được tự bịa trải nghiệm.
+
+**Tích hợp Data Hub (Dự án #2):**
+
+- Data Hub là **một nguồn đầu vào được tích hợp sẵn**, không phải điều kiện bắt buộc. Hệ thống vẫn chạy đầy đủ khi chỉ có URL hoặc văn bản.
+- Khi dùng dữ liệu thị trường, Dự án #3 lấy qua **Trend API** của Data Hub, **không tự xây lại** pipeline thu thập trending.
+- Nhóm Dự án #3 và nhóm Data Hub (Dự án #2) cùng chốt data contract `trend.v1` trong **tuần 3** (cùng với nhóm Dự án #4 — AI POD Studio, cũng là bên tiêu thụ).
 
 ### 3.3. Data Contract giữa Module 1 và Module 2 (`brief.v1`)
 
@@ -114,7 +155,7 @@ flowchart LR
 
 ### 4.1. Mục tiêu module
 
-1. Lấy dữ liệu thị trường từ **Data Hub** (kế thừa Dự án #2).
+1. Nhận **đầu vào linh hoạt** (Data Hub, URL, văn bản, từ khoá hoặc kết hợp), chuẩn hoá về `research_request.v1`, và **tự tìm thêm nguồn** khi đầu vào chưa đủ.
 2. Phân tích sâu **pain points, mong muốn, phản đối (objections)** của người dùng.
 3. Xác định góc tiếp cận nội dung (so sánh, hướng dẫn mua, review, giải quyết vấn đề) và **search intent**.
 4. Thu thập & kiểm chứng **thông tin sản phẩm** (thông số, giá, chính sách) có nguồn.
@@ -124,8 +165,10 @@ flowchart LR
 
 | Thành phần | Mô tả | Mức độ |
 |------------|-------|--------|
-| Trend consumer | Nhận `trend.created` qua webhook n8n hoặc truy vấn Trend API theo chủ đề | Bắt buộc |
+| Input Normalizer | Nhận 5 chế độ đầu vào (mục 3.2): trích nội dung từ URL, phân tích văn bản, đọc trend từ Data Hub; gộp về `research_request.v1` | Bắt buộc |
+| Trend consumer | Nhận `trend.created` qua webhook n8n hoặc truy vấn Trend API theo chủ đề (chế độ A) | Bắt buộc |
 | Research Deep Agent | Lập kế hoạch nghiên cứu (todo), điều phối sub-agents, lưu ghi chú vào file system của agent | Bắt buộc |
+| Gap-filling Researcher | Đánh giá đầu vào đã đủ bằng chứng chưa; nếu chưa, tự tìm thêm (web, trang sản phẩm, Data Hub) | Bắt buộc |
 | Pain-point Analyst | Gom cụm pain points, xếp hạng theo tần suất & mức độ, gắn evidence | Bắt buộc |
 | Competitor/SERP Analyst | Phân tích nội dung đối thủ đang xếp hạng: khoảng trống nội dung (content gap) | Bắt buộc |
 | Product Fact Collector | Agent OpenClaw thu thập thông số/giá/đánh giá; ghi nguồn và thời điểm | Bắt buộc |
@@ -135,19 +178,20 @@ flowchart LR
 
 ### 4.3. Sản phẩm bàn giao
 
+- [ ] Input Normalizer hỗ trợ đủ 5 chế độ đầu vào (Data Hub, URL, văn bản, từ khoá, kết hợp)
 - [ ] Tích hợp Trend API của Data Hub (không trùng lặp logic thu thập)
-- [ ] Research Deep Agent với ≥ 3 sub-agents
+- [ ] Research Deep Agent với ≥ 4 sub-agents (gồm Gap-filling Researcher)
 - [ ] Sinh brief `brief.v1` có evidence cho mọi pain point và fact
 - [ ] Dashboard duyệt brief
 - [ ] Bộ ≥ 30 brief mẫu cho Module 2 phát triển song song (từ tuần 4)
-- [ ] Báo cáo đánh giá: độ chính xác pain point (so với gán nhãn tay), độ phủ content gap, tỉ lệ fact có nguồn
+- [ ] Báo cáo đánh giá: độ chính xác pain point (so với gán nhãn tay), độ phủ content gap, tỉ lệ fact có nguồn, **so sánh chất lượng brief giữa các chế độ đầu vào**
 
 ### 4.4. Gợi ý phân công
 
 | Thành viên | Phụ trách |
 |------------|-----------|
-| SV1 | Tích hợp Data Hub, n8n workflows, Product Fact Collector (OpenClaw), dashboard duyệt |
-| SV2 | Research Deep Agent, Pain-point Analyst, Competitor Analyst, Outline Generator, đánh giá |
+| SV1 | Input Normalizer, tích hợp Data Hub, n8n workflows, Product Fact Collector (OpenClaw), dashboard duyệt |
+| SV2 | Research Deep Agent, Gap-filling Researcher, Pain-point Analyst, Competitor Analyst, Outline Generator, đánh giá |
 
 ---
 
@@ -240,7 +284,7 @@ Module 2 dùng bộ **brief mẫu** do Module 1 cung cấp từ tuần 4; tích 
 |------|--------------------------|----------------------------------------|
 | 1–2 | Nghiên cứu Deep Agents, OpenClaw, E-E-A-T; tìm hiểu Trend API của Data Hub | Nghiên cứu Deep Agents, kỹ thuật self-critique, TTS/video |
 | 3 | **Chốt `trend.v1` với nhóm Data Hub; chốt `brief.v1` với Module 2** | Chốt `brief.v1` |
-| 4–7 | Research Deep Agent + sub-agents (dùng seed data của Data Hub); bàn giao brief mẫu | Writer Deep Agent + Script Adapter trên brief mẫu |
+| 4–7 | Input Normalizer (URL, văn bản, từ khoá) + Research Deep Agent + sub-agents; bàn giao brief mẫu | Writer Deep Agent + Script Adapter trên brief mẫu |
 | 8–10 | Tích hợp Data Hub thật, Product Fact Collector, dashboard duyệt | Critique Agents + Revision loop |
 | 11–12 | Hoàn thiện, đánh giá chất lượng insight | Producer (audio/video), n8n xuất bản |
 | 13–14 | Tích hợp end-to-end với Module 2 | Tích hợp end-to-end, user study |
@@ -248,7 +292,8 @@ Module 2 dùng bộ **brief mẫu** do Module 1 cung cấp từ tuần 4; tích 
 
 ## 8. Rủi ro & lưu ý
 
-- **Phụ thuộc Data Hub:** Nếu Data Hub chậm tiến độ, dùng seed data `trend.v1`; không tự xây pipeline thu thập riêng.
+- **Phụ thuộc Data Hub:** Thấp, vì hệ thống chạy được với URL/văn bản/từ khoá. Nếu Data Hub chậm tiến độ, chế độ A dùng seed data `trend.v1`; không tự xây pipeline thu thập trending riêng.
+- **Thu thập từ URL người dùng đưa vào:** Tôn trọng điều khoản trang web và `robots.txt`; chỉ lấy nội dung cần cho phân tích, không đăng lại nguyên văn nội dung của người khác.
 - **Hallucination về sản phẩm:** Mọi số liệu sản phẩm phải có nguồn; Fact Critic chặn claim không có nguồn.
 - **E-E-A-T "Experience":** AI không có trải nghiệm thực tế — hệ thống phải có chỗ cho người dùng bổ sung ghi chú trải nghiệm thật, và không được bịa trải nghiệm.
 - **Tuân thủ:** Bắt buộc affiliate disclosure; tránh claim y tế/tài chính không có căn cứ; tôn trọng bản quyền hình ảnh/nhạc trong video.
