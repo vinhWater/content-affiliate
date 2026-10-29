@@ -2,7 +2,7 @@
 
 > **Nền tảng agent:** LangChain Deep Agents (trên LangGraph) · OpenClaw · n8n
 > **Số nhóm:** 2 nhóm (mỗi nhóm 2 sinh viên) — mỗi nhóm nhận 1 module
-> **Vai trò trong hệ sinh thái:** ⭐ **Module 1 (Research Insight Service) là dịch vụ dùng chung**, cung cấp insight cho Module 2 của dự án này và cho [Dự án #4 — AI POD Studio](https://github.com/vinhWater/AI-POD-Studio).
+> **Cấu trúc:** Module 1 (Research Insight Service) là **dịch vụ có API riêng**, cung cấp content brief cho Module 2 (Writer & Critique).
 > **Loại đề tài:** Luận văn tốt nghiệp — Hệ thống đa tác nhân có lập kế hoạch dài hạn và tự phản biện
 
 ---
@@ -17,11 +17,11 @@ Nội dung affiliate chất lượng thấp (viết chung chung, không trải n
 
 Dự án xây dựng hệ thống đa tác nhân **Research → Outline → Write → Critique**, sử dụng **Deep Agents** cho các tác vụ cần lập kế hoạch nhiều bước, **OpenClaw** cho các agent đọc trang / thu thập thông tin sản phẩm, và **n8n** để điều phối quy trình và kết nối dịch vụ.
 
-**Phạm vi đầu ra là văn bản** (bài blog, kịch bản video có cấu trúc). Việc sản xuất hình ảnh và video từ kịch bản thuộc về **Dự án #4**.
+**Phạm vi đầu ra là văn bản** (bài blog, kịch bản video có cấu trúc). Hệ thống **không** sản xuất audio/video; kịch bản được xuất dạng JSON để người dùng đưa vào công cụ dựng video có sẵn (TikTok Symphony, CapCut/Pippit, Creatify…).
 
 ---
 
-## 2. Hệ sinh thái: Research → Viết & phản biện → Hình ảnh/Video
+## 2. Luồng tổng quát: Research → Viết & phản biện
 
 ```mermaid
 flowchart LR
@@ -32,23 +32,18 @@ flowchart LR
         M2["Module 2<br/>Writer & Critique"]
     end
 
-    P4["DỰ ÁN #4<br/>AI POD Studio<br/>(hình ảnh & video)"]
-
     U --> M1
     M1 -- "content brief (brief.v1)" --> M2
-    M1 -- "creative brief (creative_brief.v1)" --> P4
     M2 -- "blog + kịch bản (video_script.v1)" --> OUT["Thành phẩm văn bản"]
-    M2 -- "video_script.v1" --> P4
 ```
 
 | Định dạng dữ liệu | Bên tạo | Bên dùng | Chốt vào |
 |-------------------|---------|----------|----------|
 | `research_request.v1` | Người dùng / n8n | Module 1 | Tuần 3 |
 | `brief.v1` (content brief) | Module 1 | Module 2 | Tuần 3 |
-| `creative_brief.v1` | Module 1 | Dự án #4 | Tuần 3 |
-| `video_script.v1` | Module 2 | Dự án #4 | Tuần 3 |
+| `video_script.v1` | Module 2 | Người dùng / công cụ dựng video bên ngoài | Tuần 3 |
 
-> Ba nhóm (#3 Module 1, #3 Module 2, #4) cùng chốt các định dạng này trong **tuần 3**. Thay đổi không tương thích phải tăng version và thông báo trước.
+> Hai nhóm cùng chốt các định dạng này trong **tuần 3**. Thay đổi không tương thích phải tăng version và thông báo trước.
 
 ---
 
@@ -58,7 +53,7 @@ flowchart LR
 |---|----------|---------------------------|
 | G1 | Nhận **đầu vào linh hoạt**: URL, văn bản, từ khoá, file dữ liệu hoặc kết hợp | Cả 5 chế độ đầu vào (mục 4.2) chạy end-to-end |
 | G2 | Phân tích pain points & insight, có bằng chứng cho từng ý | 100% pain point và fact trong brief truy vết được về nguồn |
-| G3 | Research Insight là **dịch vụ dùng chung** cho Module 2 và Dự án #4 | API ổn định, có version; xuất được cả `brief.v1` và `creative_brief.v1` |
+| G3 | Research Insight là **dịch vụ có API riêng**, tách biệt với Module 2 | API ổn định, có version, có OpenAPI spec |
 | G4 | Viết blog / kịch bản video chuẩn E-E-A-T | Đạt ≥ 80% tiêu chí checklist E-E-A-T do nhóm xây dựng |
 | G5 | Tự phản biện: phát hiện lỗi logic, sai sự thật, claim không có căn cứ | Giảm ≥ 50% lỗi so với bản nháp đầu (trên bộ test) |
 | G6 | Kiểm soát chi phí nghiên cứu | Mỗi yêu cầu có ngân sách (số nguồn, token); đo và báo cáo chi phí mỗi brief |
@@ -68,7 +63,7 @@ flowchart LR
 
 ## 4. MODULE 1 — Research Insight Service (AI Researcher)
 
-> ⭐ **Module dùng chung.** Nhóm nhận module này chịu trách nhiệm về độ ổn định API, tài liệu và hỗ trợ tích hợp cho nhóm Module 2 và nhóm Dự án #4.
+> Nhóm nhận module này chịu trách nhiệm về độ ổn định API, tài liệu và hỗ trợ tích hợp cho nhóm Module 2.
 
 ### 4.1. Mục tiêu module
 
@@ -76,7 +71,7 @@ flowchart LR
 2. **Tự lập kế hoạch nghiên cứu** và tự tìm thêm nguồn khi đầu vào chưa đủ.
 3. Phân tích sâu **pain points, mong muốn, phản đối (objections)** và **search intent** của người dùng.
 4. Thu thập & kiểm chứng **thông tin sản phẩm** (thông số, giá, chính sách) có nguồn.
-5. Xuất kết quả theo **hai hồ sơ đầu ra**: content brief cho Module 2, creative brief cho Dự án #4.
+5. Xuất **content brief** (`brief.v1`) cho Module 2.
 6. Nghiên cứu **theo yêu cầu, có ngân sách** — không chạy hàng loạt.
 
 ### 4.2. Đầu vào linh hoạt
@@ -100,7 +95,6 @@ flowchart LR
     { "type": "keyword", "value": "ergonomic chair under $300" }
   ],
   "goal": "affiliate buying guide",
-  "output_profiles": ["content", "creative"],
   "budget": { "max_sources": 25, "max_llm_cost_usd": 0.5 },
   "allow_web_research": true,
   "lang": "vi"
@@ -121,10 +115,9 @@ flowchart TB
     PLAN --> SERP["Sub-agent: Competitor / SERP Analyst"]
     PLAN --> FACT["Sub-agent: Product Fact Collector<br/>(OpenClaw)"]
 
-    GAP & PAIN & SERP & FACT --> SYN["Insight Synthesizer<br/>(research_result — kết quả gốc)"]
+    GAP & PAIN & SERP & FACT --> SYN["Insight Synthesizer"]
     SYN --> HIL["Người dùng duyệt"]
     HIL --> CB["Content brief<br/>brief.v1 → Module 2"]
-    HIL --> CRB["Creative brief<br/>creative_brief.v1 → Dự án #4"]
 ```
 
 | Agent | Nhiệm vụ |
@@ -135,7 +128,7 @@ flowchart TB
 | Pain-point Analyst | Gom cụm pain points/desires/objections, xếp hạng theo tần suất & mức độ, gắn evidence |
 | Competitor / SERP Analyst | Phân tích nội dung đối thủ đang xếp hạng, tìm khoảng trống nội dung (content gap) |
 | Product Fact Collector | Agent OpenClaw đọc trang sản phẩm: thông số, giá, chính sách; ghi nguồn và thời điểm |
-| Insight Synthesizer | Tổng hợp thành kết quả gốc, rồi xuất theo từng hồ sơ đầu ra |
+| Insight Synthesizer | Tổng hợp kết quả các sub-agent thành content brief, ghi rõ phần còn thiếu (`gaps`) |
 
 ### 4.4. Kiểm soát chi phí
 
@@ -147,9 +140,7 @@ flowchart TB
 - **Dừng sớm:** Gap-filling Researcher dừng khi đủ bằng chứng hoặc hết ngân sách, và ghi rõ trong brief phần nào còn thiếu.
 - **Đo lường:** mỗi brief ghi lại số nguồn, số token, chi phí, thời gian.
 
-### 4.5. Hai hồ sơ đầu ra
-
-**Content brief (`brief.v1`) → Module 2:**
+### 4.5. Content brief (`brief.v1`) → Module 2
 
 ```json
 {
@@ -176,49 +167,22 @@ flowchart TB
 }
 ```
 
-**Creative brief (`creative_brief.v1`) → Dự án #4:**
-
-```json
-{
-  "schema_version": "creative_brief.v1",
-  "creative_brief_id": "cb_2026_10_29_0004",
-  "research_id": "rs_2026_10_29_0007",
-  "product": {
-    "name": "Chair X",
-    "category": "ergonomic office chair",
-    "reference_images": ["https://example.com/chair-x-front.jpg"],
-    "must_keep": ["logo trên lưng ghế", "màu lưới xám"]
-  },
-  "audience": ["remote workers 25-40", "people with lower back pain"],
-  "key_message": "Ngồi 8 tiếng không còn đau lưng",
-  "selling_points": [
-    { "text": "adjustable lumbar support", "evidence": ["url:product_page"] },
-    { "text": "breathable mesh back", "evidence": ["url:review-site"] }
-  ],
-  "pain_points": [{ "text": "lower back pain after long sitting", "evidence": ["user_text:1"] }],
-  "mood": ["clean", "calm", "home office"],
-  "do_not_claim": ["chữa khỏi bệnh lý cột sống"],
-  "lang": "vi"
-}
-```
-
 ### 4.6. API dịch vụ
 
 | Endpoint | Mô tả |
 |----------|-------|
 | `POST /research` | Gửi `research_request.v1`, trả `research_id` (chạy bất đồng bộ) |
 | `GET /research/{id}` | Trạng thái, tiến độ (todo list của agent), chi phí đã dùng |
-| `GET /research/{id}/brief?profile=content` | Lấy `brief.v1` |
-| `GET /research/{id}/brief?profile=creative` | Lấy `creative_brief.v1` |
-| Webhook `research.completed` | Báo cho n8n / Module 2 / Dự án #4 |
+| `GET /research/{id}/brief` | Lấy `brief.v1` |
+| Webhook `research.completed` | Báo cho n8n / Module 2 |
 
 ### 4.7. Sản phẩm bàn giao
 
 - [ ] Input Normalizer hỗ trợ đủ 5 chế độ đầu vào
 - [ ] Research Deep Agent với ≥ 4 sub-agents
-- [ ] Hai hồ sơ đầu ra `brief.v1` và `creative_brief.v1`, có evidence cho mọi pain point và fact
+- [ ] Content brief `brief.v1` có evidence cho mọi pain point và fact
 - [ ] API dịch vụ + webhook + OpenAPI spec
-- [ ] **Bộ ≥ 20 brief mẫu mỗi loại, giao cho Module 2 và nhóm Dự án #4 trước tuần 4**
+- [ ] **Bộ ≥ 20 brief mẫu giao cho Module 2 trước tuần 4**
 - [ ] Cơ chế ngân sách, cache, phân tầng mô hình
 - [ ] Dashboard duyệt brief
 - [ ] Báo cáo đánh giá: độ chính xác pain point (so với gán nhãn tay), độ phủ content gap, tỉ lệ fact có nguồn, chi phí & thời gian mỗi brief, so sánh chất lượng giữa các chế độ đầu vào
@@ -237,11 +201,11 @@ flowchart TB
 ### 5.1. Mục tiêu module
 
 1. Từ content brief đã duyệt, viết **bài blog** chuẩn E-E-A-T.
-2. Chuyển thể thành **kịch bản video có cấu trúc** (`video_script.v1`) để Dự án #4 sản xuất video.
+2. Chuyển thể thành **kịch bản video có cấu trúc** (`video_script.v1`) để người dùng đưa vào công cụ dựng video có sẵn.
 3. **Tự kiểm duyệt chéo** bằng nhiều agent phản biện, lặp sửa đến khi đạt ngưỡng chất lượng.
 4. Xuất thành phẩm văn bản (Markdown/HTML, JSON), tuỳ chọn đăng bản nháp lên CMS qua n8n.
 
-> **Không thuộc phạm vi:** TTS, audio, dựng video, thumbnail — thuộc Dự án #4.
+> **Không thuộc phạm vi:** TTS, audio, dựng video, thumbnail — người dùng dùng công cụ dựng video có sẵn trên thị trường.
 
 ### 5.2. Các agent
 
@@ -278,14 +242,13 @@ sequenceDiagram
 
 > Báo cáo phản biện (lỗi phát hiện / đã sửa / còn tồn tại) phải được lưu lại — đây là dữ liệu chính để đánh giá trong luận văn. Để tiết kiệm, Critic chỉ chấm lại **các đoạn đã sửa** ở vòng sau, không chấm lại toàn bài.
 
-### 5.4. Kịch bản video có cấu trúc (`video_script.v1`) → Dự án #4
+### 5.4. Kịch bản video có cấu trúc (`video_script.v1`)
 
 ```json
 {
   "schema_version": "video_script.v1",
   "script_id": "vs_2026_10_29_0004",
   "brief_id": "br_2026_10_29_0004",
-  "creative_brief_id": "cb_2026_10_29_0004",
   "aspect_ratio": "9:16",
   "target_duration_s": 30,
   "voice": { "tone": "friendly, calm", "lang": "vi" },
@@ -321,7 +284,6 @@ sequenceDiagram
 - [ ] ≥ 4 Critique Agents + Revision Controller
 - [ ] Checklist E-E-A-T có thể chấm tự động (rubric)
 - [ ] Xuất Markdown/HTML + JSON; tuỳ chọn đăng nháp lên CMS qua n8n
-- [ ] **Bộ ≥ 10 `video_script.v1` mẫu giao cho nhóm Dự án #4 trước tuần 6**
 - [ ] Báo cáo đánh giá: số lỗi trước/sau phản biện, điểm E-E-A-T, đánh giá người đọc (user study nhỏ), chi phí & thời gian mỗi thành phẩm
 
 ### 5.6. Gợi ý phân công
@@ -357,17 +319,17 @@ Module 2 dùng bộ **brief mẫu** do Module 1 giao từ tuần 4; tích hợp 
 | Tuần | Module 1 (Research Insight Service) | Module 2 (Writer & Critique) |
 |------|-------------------------------------|------------------------------|
 | 1–2 | Nghiên cứu Deep Agents, OpenClaw, E-E-A-T | Nghiên cứu Deep Agents, kỹ thuật self-critique |
-| 3 | **Chốt `research_request.v1`, `brief.v1`, `creative_brief.v1` với Module 2 và nhóm Dự án #4** | **Chốt `brief.v1`, `video_script.v1` với Module 1 và nhóm Dự án #4** |
-| 4 | Giao brief mẫu (content + creative) | Writer Deep Agent trên brief mẫu |
-| 4–7 | Input Normalizer + Research Deep Agent + sub-agents | Writer + Script Adapter; giao script mẫu cho #4 (tuần 6) |
+| 3 | **Chốt `research_request.v1`, `brief.v1` với Module 2** | **Chốt `brief.v1`, `video_script.v1` với Module 1** |
+| 4 | Giao brief mẫu | Writer Deep Agent trên brief mẫu |
+| 4–7 | Input Normalizer + Research Deep Agent + sub-agents | Writer + Script Adapter |
 | 8–10 | API dịch vụ, ngân sách, cache, dashboard duyệt | Critique Agents + Revision loop |
 | 11–12 | Hoàn thiện, đánh giá chất lượng insight & chi phí | Rubric E-E-A-T, xuất bản qua n8n |
-| 13–14 | Tích hợp end-to-end với Module 2 và Dự án #4 | Tích hợp end-to-end, user study |
+| 13–14 | Tích hợp end-to-end với Module 2 | Tích hợp end-to-end, user study |
 | 15–16 | Luận văn + demo | Luận văn + demo |
 
 ## 8. Rủi ro & lưu ý
 
-- **Module 1 có nhiều bên phụ thuộc:** giao brief mẫu sớm; dùng versioning cho mọi định dạng dữ liệu.
+- **Module 2 phụ thuộc Module 1:** giao brief mẫu sớm; dùng versioning cho mọi định dạng dữ liệu.
 - **Chi phí nghiên cứu:** bắt buộc có ngân sách mỗi yêu cầu, cache và phân tầng mô hình.
 - **Hallucination về sản phẩm:** mọi số liệu sản phẩm phải có nguồn; Fact Critic chặn claim không có nguồn.
 - **E-E-A-T "Experience":** AI không có trải nghiệm thực tế — hệ thống lấy trải nghiệm từ người dùng (`user_experience`), không bịa trải nghiệm.
